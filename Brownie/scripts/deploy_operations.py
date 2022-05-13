@@ -1,19 +1,27 @@
-from brownie import Operational
-from scripts.helpfulScripts import getAccount
-
+from brownie import Operational, config, network
+from scripts.helpfulScripts import getAccount, fundWithLink
+from web3 import Web3
 
 def deploy_operations():
     account = getAccount()
-    deploy_tx = Operational.deploy({"from":account})
+    deploy_tx = Operational.deploy(
+        config["networks"][network.show_active()]["vrf_coordinator"],
+        config["networks"][network.show_active()]["link_token"],
+        config["networks"][network.show_active()]["fee"],
+        config["networks"][network.show_active()]["key_hash"],
+        {"from":account}, 
+        publish_source=config["networks"][network.show_active()]["verify"])
     print(deploy_tx)
 
 
-def add_goods(seller_address, id, name, token_amount, image_uri, description):
+def add_goods(seller_address, name, token_amount, image_uri, description):
     account = getAccount()
     operationals = Operational[-1]
-    tx_add = operationals.addGoods(seller_address, id, name, token_amount, image_uri, description, {"from": account})
+    tx_fund = fundWithLink(operationals, amount=config["networks"][network.show_active()]["fee"])
+    tx_fund.wait(1)
+    tx_add = operationals.addGoods(seller_address, name, token_amount, image_uri, description, {"from": account})
     tx_add.wait(1)
-    print("Added the good!")
+    print("The good will be added and displayed soon!")
 
 
 def get_all_goods():
@@ -58,7 +66,7 @@ def main():
 
     # deploy_operations()
 
-    # add_goods("", 1, "Test good1", 10, "", "This is first test")
+    # add_goods("", "Test good1", 10, "", "This is first test")
 
     # get_all_goods()
 
