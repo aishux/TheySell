@@ -5,10 +5,12 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract Operational is VRFConsumerBase, Ownable {
     uint256 public fee;
     bytes32 public keyhash;
+    uint256 private order_counter = 777;
 
     struct Goods {
         address good_owner;
@@ -21,11 +23,25 @@ contract Operational is VRFConsumerBase, Ownable {
         uint256 index_seller_goods;
     }
 
+    struct Order {
+        uint256 order_id;
+        address seller_address;
+        address buyer_address;
+        uint256[] goods_ids;
+        uint256 total_bill;
+        bool isDelivered;
+    }
+
     Goods[] public all_goods;
 
     mapping(address => Goods[]) public seller_to_goods;
     mapping(bytes32 => Goods) public requestId_to_good;
     mapping(uint256 => Goods) public id_to_good;
+    mapping(uint256 => Order) public id_to_order;
+    //TODO: remove public and make a function that uses msg.sender
+    mapping(address => uint256[]) public buyer_to_orders;
+    mapping(address => uint256[]) public seller_to_orders;
+    mapping(address => uint256) public seller_to_amount_payable;
 
     constructor(
         address _vrfCoordinator,
@@ -36,7 +52,7 @@ contract Operational is VRFConsumerBase, Ownable {
         fee = _fee;
         keyhash = _keyhash;
     }
-    
+
     function addGoods(
         address _seller_address,
         string memory _name,
@@ -82,7 +98,74 @@ contract Operational is VRFConsumerBase, Ownable {
             "Index doesn't exists"
         );
         delete all_goods[index1];
+        delete id_to_good[seller_to_goods[_seller_address][index2].id];
         delete seller_to_goods[_seller_address][index2];
+    }
+
+    function placeOrder(
+        address _our_token,
+        address _buyer_address,
+        uint256[] memory _goods_ids
+    ) public returns (uint256) {
+        IERC20 our_token = IERC20(_our_token);
+
+        uint256 _total_amount = 0;
+        address _seller_address = id_to_good[_goods_ids[0]].good_owner;
+
+        for (uint256 index = 0; index < _goods_ids.length; index++) {
+            _total_amount += id_to_good[_goods_ids[index]].token_amount;
+        }
+
+        require(
+            our_token.allowance(_buyer_address, address(this)) >=
+                _total_amount,
+            "Allowance is not enought"
+        );
+
+        require(
+            our_token.transferFrom(
+                _buyer_address,
+                address(this),
+                _total_amount
+            ),
+            "Something went wrong!"
+        );
+
+        Order memory new_order = Order(
+            order_counter,
+            _seller_address,
+            _buyer_address,
+            _goods_ids,
+            _total_amount,
+            false
+        );
+
+        id_to_order[order_counter] = new_order;
+        buyer_to_orders[_buyer_address].push(order_counter);
+
+        seller_to_orders[_seller_address].push(order_counter);
+
+        order_counter++;
+    }
+
+    function idDelivered(uint256 _order_id) public onlyOwner {
+        id_to_order[_order_id].isDelivered = true;
+        seller_to_amount_payable[id_to_order[_order_id].seller_address] += id_to_order[_order_id].total_bill;
+    }
+
+    function sellerWithdraw(address _our_token, address seller_address)
+        public
+        onlyOwner
+    {
+        IERC20 our_token = IERC20(_our_token);
+        require(
+            our_token.transfer(
+                seller_address,
+                seller_to_amount_payable[seller_address]
+            ),
+            "Failed to transfer"
+        );
+        seller_to_amount_payable[seller_address] = 0;
     }
 
     function fulfillRandomness(bytes32 _requestId, uint256 _randomness)

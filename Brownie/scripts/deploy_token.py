@@ -16,10 +16,10 @@ def transfer_to_user(user_address, amount):
     res = requests.get("https://min-api.cryptocompare.com/data/price?fsym=INR&tsyms=ETH").json()
     inr_to_eth = res["ETH"] * amount
     account = getAccount()
-    our_coin = TheyCoin[-1]
-    tx_fund = fundWithLink(our_coin, amount=Web3.toWei(0.01, "ether"))
+    our_token = TheyCoin[-1]
+    tx_fund = fundWithLink(our_token, amount=Web3.toWei(0.01, "ether"))
     tx_fund.wait(1)
-    tx = our_coin.payUser(our_coin, user_address, {"from": account, "value": Web3.toWei(inr_to_eth, "ether")})
+    tx = our_token.payUser(our_token, user_address, {"from": account, "value": Web3.toWei(inr_to_eth, "ether")})
     tx.wait(1)
     print("Transfer has been made!")
     print("Tokens will be sent soon!")

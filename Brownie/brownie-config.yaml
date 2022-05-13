@@ -23,4 +23,5 @@ networks:
     fee: 100000000000000000
 
 wallets:
-  from_key: ${PRIVATE_KEY}
+  from_key1: ${PRIVATE_KEY1}
+  from_key3: ${PRIVATE_KEY3}

@@ -5,7 +5,7 @@ FORKED_LOCAL_ENVIRONMENTS = ["mainnet-fork", "mainnet-fork-dev"]
 LOCAL_BLOCKCHAINS = ["development", "ganache-local"]
 
 
-def getAccount(index=None, id=None):
+def getAccount(index=None, id=None, from_key="from_key1"):
     if index:
         return accounts[0]
 
@@ -15,7 +15,7 @@ def getAccount(index=None, id=None):
     if network.show_active() in LOCAL_BLOCKCHAINS or network.show_active() in FORKED_LOCAL_ENVIRONMENTS:
         return accounts[0]
 
-    return accounts.add(config["wallets"]["from_key"])
+    return accounts.add(config["wallets"][from_key])
 
 
 contract_to_mock = {

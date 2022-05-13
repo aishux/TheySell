@@ -18,8 +18,6 @@ contract TheyCoin is ERC20, ChainlinkClient, Ownable {
     bytes32 private jobId;
     uint256 private fee;
 
-    address token_address;
-
     mapping(bytes32 => address) public requestId_toSender;
     mapping(address => uint256) public address_to_ethgiven;
 
@@ -35,12 +33,10 @@ contract TheyCoin is ERC20, ChainlinkClient, Ownable {
         fee = 0.01 * 10**18;
     }
 
-    // Later remove this "_to_user" with msg.sender and also remove functional arg
-    function payUser(address _token, address _to_user) public payable {
-        token_address = _token;
+    function payUser() public payable {
         bytes32 requestId = requestVolumeData();
-        requestId_toSender[requestId] = _to_user;
-        address_to_ethgiven[_to_user] = msg.value;
+        requestId_toSender[requestId] = msg.sender;
+        address_to_ethgiven[msg.sender] = msg.value;
     }
 
     function requestVolumeData() public returns (bytes32 requestId) {
@@ -53,10 +49,10 @@ contract TheyCoin is ERC20, ChainlinkClient, Ownable {
         // Set the URL to perform the GET request on
         request.add(
             "get",
-            "https://min-api.cryptocompare.com/data/price?fsym=INR&tsyms=ETH"
+            "https://min-api.cryptocompare.com/data/pricemultifull?fsyms=INR&tsyms=ETH"
         );
 
-        request.add("path", "ETH");
+        request.add("path", "RAW.INR.ETH.OPEN24HOUR");
 
         // Multiply the result by 1000000000000000000 to remove decimals
         int256 timesAmount = 10**18;
@@ -83,7 +79,7 @@ contract TheyCoin is ERC20, ChainlinkClient, Ownable {
 
         uint256 amount_of_tokens = ((amount_in_eth / _volume) * (10**18)) / 10;
 
-        IERC20 paymentToken = IERC20(token_address);
+        IERC20 paymentToken = IERC20(address(this));
 
         require(amount_of_tokens > 0, "Tokens too less!");
 
@@ -98,5 +94,4 @@ contract TheyCoin is ERC20, ChainlinkClient, Ownable {
 
         address_to_ethgiven[requestId_toSender[_requestId]] = 0;
     }
-
 }
