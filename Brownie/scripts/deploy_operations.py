@@ -5,11 +5,7 @@ from web3 import Web3
 def deploy_operations():
     account = getAccount()
     deploy_tx = Operational.deploy(
-        config["networks"][network.show_active()]["vrf_coordinator"],
-        config["networks"][network.show_active()]["link_token"],
-        config["networks"][network.show_active()]["fee"],
-        config["networks"][network.show_active()]["key_hash"],
-        {"from":account}, 
+        {"from":account},
         publish_source=config["networks"][network.show_active()]["verify"])
     print(deploy_tx)
 
