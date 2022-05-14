@@ -1,19 +1,22 @@
+import json
 import pyrebase
+import os
 from django.shortcuts import render, redirect
 from django.contrib import auth
-from django.http import HttpResponseRedirect, JsonResponse
+from django.http import HttpResponseRedirect, JsonResponse, HttpResponse
 from django.urls import reverse
-from sellapp.models import WebUser, Cart, Orders
+from farmapp.models import WebUser, Cart, Orders
 from django.contrib.auth import models
 from django.core.files.storage import default_storage
+from .utils import web, operations_contract, upload_to_ipfs, final_is_delivered, token_address
 
 config = {
-    'apiKey': "",
-    'authDomain': "",
-    'projectId': "",
-    'storageBucket': "",
-    'messagingSenderId': "",
-    'appId': "",
+    'apiKey': "AIzaSyCByllLto91nY_iGjo36nFzFzlZ6QFZPBI",
+    'authDomain': "farm-a-future.firebaseapp.com",
+    'projectId': "farm-a-future",
+    'storageBucket': "farm-a-future.appspot.com",
+    'messagingSenderId': "20497803793",
+    'appId': "1:20497803793:web:745ef4dcf5a0ed24d35fb0",
     "databaseURL": ""
 }
 
@@ -47,6 +50,7 @@ def handleLogin(request):
             return render(request, 'login.html', {"msg": message})
 
         session_id = user['localId']
+        request.session['email'] = email
         request.session['uid'] = str(session_id)
         return render(request, 'welcome.html')
     return HttpResponseRedirect(reverse("home"))
@@ -86,7 +90,7 @@ def handleSignUpSeller(request):
             id=new_user["localId"], 
             full_name=full_name,
             seller_id=seller_id,
-            aadhaar_link="https://firebasestorage.googleapis.com/v0/b//o/aadhaars%2F{}_aadhaar.pdf?alt=media".format(new_user["localId"]),
+            aadhaar_link="https://firebasestorage.googleapis.com/v0/b/farm-a-future.appspot.com/o/aadhaars%2F{}_aadhaar.pdf?alt=media".format(new_user["localId"]),
             request_seller=True,
             account_address=account_address,
             group=models.Group.objects.filter(name="NormalUser")[0])
@@ -128,8 +132,11 @@ def display_cart(request):
 def checkout(request):
     if request.method == "POST":
         user = WebUser.objects.filter(id=request.session['uid'])[0]
+        seller_address = request.POST.get("seller_address")
+        buyer_address = request.POST.get("buyer_address")
         order_id = request.POST.get("order_id")
         items_json = request.POST.get('itemsJson','')
+        item_ids = request.POST.get('item_ids','')
         name = request.POST.get('firstName','')+" "+request.POST.get('lastName','')
         amount = request.POST.get('amount','')
         email = request.POST.get('email','')
@@ -141,8 +148,11 @@ def checkout(request):
 
         new_order = Orders(
             user=user,
+            buyer_address=buyer_address,
+            seller_address=seller_address,
             order_id=order_id,
             items_json=items_json,
+            item_ids=item_ids,
             amount=float(amount),
             name=name,
             email=email,
@@ -160,5 +170,91 @@ def checkout(request):
     return render(request, "checkout.html")
 
 
+def all_orders(request):
+    all_orders = Orders.objects.filter(user=WebUser.objects.filter(id=request.session['uid'])[0])
+    return render(request, "all_orders.html",{"all_orders":all_orders})
+
+
+def order_summary(request, order_id):
+    current_order = Orders.objects.filter(order_id=order_id)[0]
+    if current_order.user.id == request.session['uid']:
+        items_lst = []
+        json_items = json.loads(current_order.items_json)
+        for item in json_items:
+            items_lst.append(json_items[item])
+        return render(request, "order_summary.html", {"curr_order": current_order, "all_items": items_lst})
+    else:
+        return HttpResponse('Unauthorized', status=401)
+
+
 def user_profile(request):
-    return render(request, "user_profile.html")
+    account_address = ""
+    seller_balance = ""
+    user = WebUser.objects.filter(id=request.session['uid'])[0]
+    user_email = request.session["email"]
+    is_seller = user.group.name == "Seller"
+    if is_seller:
+        account_address = user.account_address
+        seller_balance = web.eth.getBalance(account_address)
+    all_orders = Orders.objects.filter(user=user)[:5]
+    return render(request, "user_profile.html", {"all_orders": all_orders, "user_name": user.full_name, "user_email": user_email, "is_seller": is_seller, "account_address": account_address, "seller_balance": seller_balance})
+
+
+def add_good(request):
+    return render(request, "sellers/addItem.html")
+
+
+def save_good(request):
+    if request.method == "POST":
+        user = WebUser.objects.filter(id=request.session['uid'])[0]
+        if user.group.name == "Seller":
+            good_name = request.POST.get("good_name")
+            token_amount = int((float(request.POST.get("good_price")) / 10)*(10**18))
+            image = request.FILES.get("good_image")
+            description = request.POST.get("good_desc")
+
+            seller_address = user.account_address
+
+            image_uri = upload_to_ipfs(image)
+
+            nonce = web.eth.get_transaction_count(web.toChecksumAddress(web.eth.default_account))
+            operation_tx = operations_contract.functions.addGoods(seller_address, good_name, token_amount, image_uri, description).buildTransaction({
+                'chainId': 4,
+                'gas': 7000000,
+                'gasPrice': web.toHex((10**11)),
+                'nonce': nonce,
+                })
+            signed_tx = web.eth.account.sign_transaction(operation_tx, private_key=os.getenv("PRIVATE_KEY"))
+            receipt = web.eth.send_raw_transaction(signed_tx.rawTransaction)
+            web.eth.wait_for_transaction_receipt(receipt)
+            print("Good will be added soon!")
+
+            return HttpResponseRedirect(reverse("addgood"))
+
+    return HttpResponse('Unauthorized', status=401)
+
+
+def seller_home(request):
+    user = WebUser.objects.filter(id=request.session['uid'])[0].account_address
+    return render(request, "sellers/index.html", {"sellerAddress": user})
+
+
+def seller_withdraw(request, acc_address):
+    user_acc = WebUser.objects.filter(id=request.session['uid'])[0].account_address
+    if user_acc == acc_address:
+        nonce = web.eth.get_transaction_count(web.toChecksumAddress(web.eth.default_account))
+        withdraw_tx = operations_contract.functions.sellerWithdraw(token_address, acc_address).buildTransaction({
+                'chainId': 4,
+                'gas': 700000,
+                'maxFeePerGas': web.toWei('2', 'gwei'),
+                'maxPriorityFeePerGas': web.toWei('1', 'gwei'),
+                'nonce': nonce,
+                })
+        signed_tx = web.eth.account.sign_transaction(withdraw_tx, private_key=os.getenv("PRIVATE_KEY"))
+        receipt = web.eth.send_raw_transaction(signed_tx.rawTransaction)
+        web.eth.wait_for_transaction_receipt(receipt)
+        print("Tokens have been withdrawn!")
+
+        return HttpResponseRedirect(reverse("userprofile"))
+    else:
+        return HttpResponse('Unauthorized', status=401)

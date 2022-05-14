@@ -2,7 +2,7 @@ var current_user_account = ""
 var token_contract = ""
 var operations_contract = ""
 const address_token_contract = ""
-const address_seller_operations = ""
+const address_sell_operations = ""
 
 const web = new Web3("https://rinkeby.infura.io/v3/")
 
@@ -19,9 +19,9 @@ $.ajax({
     url: "https://api-rinkeby.etherscan.io/api?module=contract&action=getabi&address=&apikey=",
     dataType: "json",
     success: function (data) {
-        operations_contract = new web.eth.Contract(JSON.parse(data.result), address_seller_operations)
+        operations_contract = new web.eth.Contract(JSON.parse(data.result), address_sell_operations)
         getAllGoods()
-        localStorage.setItem('operations_contract', JSON.stringify([JSON.parse(data.result), address_seller_operations]))
+        localStorage.setItem('operations_contract', JSON.stringify([JSON.parse(data.result), address_sell_operations]))
     }
 });
 
@@ -106,7 +106,7 @@ async function getAllGoods(){
             </div>
             `)
 
-            if(goods_index % 4 == 0 && goods_index > 0 && goods_index != seller_to_goods[all_sellers[seller_index]].length){
+            if(goods_index > 0 && goods_index % 4 == 0 && goods_index != seller_to_goods[all_sellers[seller_index]].length){
                 $carousel_inner.append($carousel_item)
                 $carousel_item = $(`<div class="carousel-item"></div>`)
             }
