@@ -11,12 +11,12 @@ from django.core.files.storage import default_storage
 from .utils import web, operations_contract, upload_to_ipfs, final_is_delivered, token_address
 
 config = {
-    'apiKey': "AIzaSyCByllLto91nY_iGjo36nFzFzlZ6QFZPBI",
-    'authDomain': "farm-a-future.firebaseapp.com",
-    'projectId': "farm-a-future",
-    'storageBucket': "farm-a-future.appspot.com",
-    'messagingSenderId': "20497803793",
-    'appId': "1:20497803793:web:745ef4dcf5a0ed24d35fb0",
+    'apiKey': "",
+    'authDomain': "",
+    'projectId': "",
+    'storageBucket': "",
+    'messagingSenderId': "",
+    'appId': "",
     "databaseURL": ""
 }
 
@@ -26,8 +26,12 @@ storage = firebase.storage()
 
 
 def home(request):
-    if authe.current_user is not None:
-        return render(request, 'welcome.html')
+    if request.session.get('uid') is not None:
+        user = WebUser.objects.filter(id=request.session['uid'])[0]
+        if user.group.name == "Seller":
+            return HttpResponseRedirect(reverse("sellerhome"))
+        else:
+            return HttpResponseRedirect(reverse("shop"))
     return render(request, 'login.html')
 
 
@@ -51,8 +55,8 @@ def handleLogin(request):
 
         session_id = user['localId']
         request.session['email'] = email
+        request.session['usrname'] = email.split("@")[0]
         request.session['uid'] = str(session_id)
-        return render(request, 'welcome.html')
     return HttpResponseRedirect(reverse("home"))
 
 
@@ -64,7 +68,7 @@ def handleSignUpUser(request):
         new_user = authe.create_user_with_email_and_password(email, password)
         web_user = WebUser(id=new_user["localId"], full_name=full_name, group=models.Group.objects.filter(name="NormalUser")[0])
         web_user.save()
-        new_cart = Cart(user=web_user, cart="")
+        new_cart = Cart(user=web_user, cart="{}")
         new_cart.save()
     return HttpResponseRedirect(reverse("home"))
 
@@ -97,36 +101,45 @@ def handleSignUpSeller(request):
 
         web_user.save()
 
-        new_cart = Cart(user=web_user, cart="")
+        new_cart = Cart(user=web_user, cart="{}")
         new_cart.save()
     return HttpResponseRedirect(reverse("home"))
 
 
 def handleLogout(request):
-    auth.logout(request)
-    authe.current_user = None
+    if request.session.get('uid') is not None:
+        auth.logout(request)
+        authe.current_user = None
     return HttpResponseRedirect(reverse("home"))
 
 
 def shop(request):
-    user = WebUser.objects.filter(id=request.session['uid'])[0]
-    get_cart = Cart.objects.filter(user=user)[0]
-    get_cart = "{}".format(get_cart.cart)
-    return render(request, "index.html", {'carty': get_cart})
+    if request.session.get('uid') is not None:
+        user = WebUser.objects.filter(id=request.session['uid'])[0]
+        if user.group.name != "Seller":
+            get_cart = Cart.objects.filter(user=user)[0]
+            get_cart = "{}".format(get_cart.cart)
+            return render(request, "index.html", {'carty': get_cart})
+        else:
+            return HttpResponseRedirect(reverse("sellerhome"))
+    return HttpResponse('Unauthorized', status=401)
 
 
 def update_cart(request):
     #dynamically updating the cart using ajax request
-    user = WebUser.objects.filter(id=request.session['uid'])[0]
-    new_cart = request.GET.get('cart', None)
-    get_cart = Cart.objects.filter(user=user)[0]
-    get_cart.cart = new_cart
-    get_cart.save()
+    if request.session.get('uid') is not None:
+        user = WebUser.objects.filter(id=request.session['uid'])[0]
+        new_cart = request.GET.get('cart', None)
+        get_cart = Cart.objects.filter(user=user)[0]
+        get_cart.cart = new_cart
+        get_cart.save()
     return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
 
 
 def display_cart(request):
-    return render(request, "cart.html")
+    if request.session.get('uid') is not None:
+        return render(request, "cart.html")
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
 
 
 def checkout(request):
@@ -160,7 +173,9 @@ def checkout(request):
             city=city,
             state=state,
             zip_code=zip_code,
-            phone=phone
+            phone=phone,
+            buyer_delivered=False,
+            seller_delivered=False
         )
 
         new_order.save()
@@ -171,37 +186,55 @@ def checkout(request):
 
 
 def all_orders(request):
-    all_orders = Orders.objects.filter(user=WebUser.objects.filter(id=request.session['uid'])[0])
-    return render(request, "all_orders.html",{"all_orders":all_orders})
+    if request.session.get('uid') is not None:
+        user = WebUser.objects.filter(id=request.session['uid'])[0]
+        is_seller = user.group.name == "Seller"
+        if user.group.name == "Seller":
+            all_orders = Orders.objects.filter(seller_address=user.account_address)
+        else:
+            all_orders = Orders.objects.filter(user=WebUser.objects.filter(id=request.session['uid'])[0])
+        return render(request, "all_orders.html",{"all_orders":all_orders, "is_seller": is_seller})
+    return HttpResponse('Unauthorized', status=401)
 
 
 def order_summary(request, order_id):
-    current_order = Orders.objects.filter(order_id=order_id)[0]
-    if current_order.user.id == request.session['uid']:
-        items_lst = []
-        json_items = json.loads(current_order.items_json)
-        for item in json_items:
-            items_lst.append(json_items[item])
-        return render(request, "order_summary.html", {"curr_order": current_order, "all_items": items_lst})
-    else:
-        return HttpResponse('Unauthorized', status=401)
+    if request.session.get('uid') is not None:
+        user = WebUser.objects.filter(id=request.session['uid'])[0]
+        current_order = Orders.objects.filter(order_id=order_id)[0]
+        if current_order.user.id == request.session['uid'] or current_order.seller_address == user.account_address:
+            items_lst = []
+            json_items = json.loads(current_order.items_json)
+            for item in json_items:
+                items_lst.append(json_items[item])
+            return render(request, "order_summary.html", {"curr_order": current_order, "all_items": items_lst})
+    return HttpResponse('Unauthorized', status=401)
 
 
 def user_profile(request):
-    account_address = ""
-    seller_balance = ""
-    user = WebUser.objects.filter(id=request.session['uid'])[0]
-    user_email = request.session["email"]
-    is_seller = user.group.name == "Seller"
-    if is_seller:
-        account_address = user.account_address
-        seller_balance = web.eth.getBalance(account_address)
-    all_orders = Orders.objects.filter(user=user)[:5]
-    return render(request, "user_profile.html", {"all_orders": all_orders, "user_name": user.full_name, "user_email": user_email, "is_seller": is_seller, "account_address": account_address, "seller_balance": seller_balance})
+    if request.session.get('uid') is not None:
+        account_address = ""
+        seller_balance = ""
+        amount_withdrawable = ""
+        user = WebUser.objects.filter(id=request.session['uid'])[0]
+        user_email = request.session["email"]
+        is_seller = user.group.name == "Seller"
+        if is_seller:
+            account_address = user.account_address
+            seller_balance = web.eth.getBalance(account_address)
+            amount_withdrawable = operations_contract.functions.seller_to_amount_payable(account_address).call()
+            all_orders = Orders.objects.filter(seller_address=user.account_address)[:5]
+        else:
+            all_orders = Orders.objects.filter(user=user)[:5]
+        return render(request, "user_profile.html", {"all_orders": all_orders, "user_name": user.full_name, "user_email": user_email, "is_seller": is_seller, "account_address": account_address, "seller_balance": seller_balance, "amount_withdrawable":amount_withdrawable})
+    return HttpResponse('Unauthorized', status=401)
 
 
 def add_good(request):
-    return render(request, "sellers/addItem.html")
+    if request.session.get('uid') is not None:
+        user = WebUser.objects.filter(id=request.session['uid'])[0]
+        if user.group.name == "Seller": 
+            return render(request, "sellers/addItem.html")
+    return HttpResponse('Unauthorized', status=401)
 
 
 def save_good(request):
@@ -235,26 +268,50 @@ def save_good(request):
 
 
 def seller_home(request):
-    user = WebUser.objects.filter(id=request.session['uid'])[0].account_address
-    return render(request, "sellers/index.html", {"sellerAddress": user})
+    if request.session.get('uid') is not None:
+        user = WebUser.objects.filter(id=request.session['uid'])[0]
+        if user.group.name == "Seller":
+            return render(request, "sellers/index.html", {"sellerAddress": user.account_address})
+    return HttpResponse('Unauthorized', status=401)
 
 
 def seller_withdraw(request, acc_address):
-    user_acc = WebUser.objects.filter(id=request.session['uid'])[0].account_address
-    if user_acc == acc_address:
-        nonce = web.eth.get_transaction_count(web.toChecksumAddress(web.eth.default_account))
-        withdraw_tx = operations_contract.functions.sellerWithdraw(token_address, acc_address).buildTransaction({
-                'chainId': 4,
-                'gas': 700000,
-                'maxFeePerGas': web.toWei('2', 'gwei'),
-                'maxPriorityFeePerGas': web.toWei('1', 'gwei'),
-                'nonce': nonce,
-                })
-        signed_tx = web.eth.account.sign_transaction(withdraw_tx, private_key=os.getenv("PRIVATE_KEY"))
-        receipt = web.eth.send_raw_transaction(signed_tx.rawTransaction)
-        web.eth.wait_for_transaction_receipt(receipt)
-        print("Tokens have been withdrawn!")
+    if request.session.get('uid') is not None:
+        user_acc = WebUser.objects.filter(id=request.session['uid'])[0].account_address
+        if user_acc == acc_address:
+            nonce = web.eth.get_transaction_count(web.toChecksumAddress(web.eth.default_account))
+            withdraw_tx = operations_contract.functions.sellerWithdraw(token_address, acc_address).buildTransaction({
+                    'chainId': 4,
+                    'gas': 700000,
+                    'maxFeePerGas': web.toWei('2', 'gwei'),
+                    'maxPriorityFeePerGas': web.toWei('1', 'gwei'),
+                    'nonce': nonce,
+                    })
+            signed_tx = web.eth.account.sign_transaction(withdraw_tx, private_key=os.getenv("PRIVATE_KEY"))
+            receipt = web.eth.send_raw_transaction(signed_tx.rawTransaction)
+            web.eth.wait_for_transaction_receipt(receipt)
+            print("Tokens have been withdrawn!")
 
-        return HttpResponseRedirect(reverse("userprofile"))
+            return HttpResponseRedirect(reverse("userprofile"))
     else:
         return HttpResponse('Unauthorized', status=401)
+
+
+def order_delivered(request, order_id):
+    if request.session.get('uid') is not None:
+        user = WebUser.objects.filter(id=request.session['uid'])[0]
+        curr_order = Orders.objects.filter(order_id=order_id)[0]
+        if user.group.name == "Seller" and curr_order.seller_address == user.account_address:
+            curr_order.seller_delivered = True
+            curr_order.save()
+        elif user.group.name != "Seller" and curr_order.user == user:
+            curr_order.buyer_delivered = True
+            curr_order.save()
+        else:
+            return HttpResponse('Unauthorized', status=401)
+
+        if curr_order.seller_delivered and curr_order.buyer_delivered:
+            final_is_delivered(int(order_id))
+
+        return HttpResponseRedirect(reverse("allorders"))
+    return HttpResponse('Unauthorized', status=401)

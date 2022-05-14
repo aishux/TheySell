@@ -22,7 +22,7 @@
 
   <!-- Navbar starts -->
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-          <a class="navbar-brand" href="/nursery">They Sell</a>
+          <a class="navbar-brand" href="/seller/home">They Sell</a>
           <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
           </button>
@@ -35,10 +35,13 @@
                 <a class="nav-link" href="/seller/addgood">ADD</a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="/seller/morders/">Orders</a>
+                <a class="nav-link" href="{% url 'allorders' %}">Orders</a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="/shop">Shop</a>
+                <a class="nav-link" href="{% url 'userprofile' %}">Profile</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/seller/dashboard/">Dashboard</a>
               </li>
             </ul>
             <ul class="navbar-nav ml-auto">
@@ -46,7 +49,7 @@
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown"
             aria-haspopup="true" aria-expanded="false">
-            Welcome {{request.user}}
+            Welcome {{request.session.usrname}}
           </a>
           <div class="dropdown-menu" aria-labelledby="navbarDropdown">
             <a class="dropdown-item" href="{% url 'logout' %}">Logout</a>

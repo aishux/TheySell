@@ -22,10 +22,10 @@ from django.conf import settings
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('home/', views.home, name='home'),
+    path('', views.home, name='home'),
     path('login/', views.handleLogin, name='login'),
     path('signupuser/', views.handleSignUpUser, name='signupuser'),
-    path('signupfarmer/', views.handleSignUpFarmer, name='signupfarmer'),
+    path('signupseller/', views.handleSignUpSeller, name='signupseller'),
     path('logout/', views.handleLogout, name='logout'),
     path('shop/', views.shop, name='shop'),
     path('cart/', views.display_cart, name='displaycart'),
@@ -33,9 +33,10 @@ urlpatterns = [
     path('userprofile/', views.user_profile, name='userprofile'),
     path('allorders/', views.all_orders, name='allorders'),
     path('ordersummary/<str:order_id>', views.order_summary, name='ordersummary'),
-    path('farmer/addgood', views.add_good, name='addgood'),
-    path('farmer/saveGood', views.save_good, name='savegood'),
-    path('farmer/home', views.farmer_home, name='farmerhome'),
-    path('farmer/withdraw/<str:acc_address>', views.farmer_withdraw, name='farmerhome'),
-    path('checkout/', views.checkout, name='checkout'),
+    path('orderdelivered/<str:order_id>', views.order_delivered, name='orderdelivered'),
+    path('seller/addgood', views.add_good, name='addgood'),
+    path('seller/saveGood', views.save_good, name='savegood'),
+    path('seller/home', views.seller_home, name='sellerhome'),
+    path('seller/withdraw/<str:acc_address>', views.seller_withdraw, name='sellerhome'),
+    path('checkout/', views.checkout, name='checkout')
 ]+static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
