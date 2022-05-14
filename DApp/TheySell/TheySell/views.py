@@ -5,6 +5,7 @@ from django.http import HttpResponseRedirect, JsonResponse
 from django.urls import reverse
 from sellapp.models import WebUser
 from django.contrib.auth import models
+from django.core.files.storage import default_storage
 
 config = {
     'apiKey': "",
@@ -18,6 +19,7 @@ config = {
 
 firebase = pyrebase.initialize_app(config)
 authe = firebase.auth()
+storage = firebase.storage()
 
 
 def home(request):
@@ -58,6 +60,41 @@ def handleSignUpUser(request):
         new_user = authe.create_user_with_email_and_password(email, password)
         web_user = WebUser(id=new_user["localId"], full_name=full_name, group=models.Group.objects.filter(name="NormalUser")[0])
         web_user.save()
+        new_cart = Cart(user=web_user, cart="")
+        new_cart.save()
+    return HttpResponseRedirect(reverse("home"))
+
+
+def handleSignUpSeller(request):
+    if request.method == "POST":
+        email = request.POST.get("email")
+        full_name = request.POST.get("fullname")
+        password = request.POST.get("password")
+        seller_id = request.POST.get("sellerid")
+        aadhaar_card = request.FILES.get("aadhaarcard")
+        account_address = request.POST.get("accadd")
+
+        new_user = authe.create_user_with_email_and_password(email, password)
+
+        file_name = new_user["localId"] + "_aadhaar" + ".pdf"
+
+        default_storage.save(file_name, aadhaar_card)
+        storage.child("aadhaars/" + file_name).put("media/" + file_name)
+        default_storage.delete(file_name)
+
+        web_user = WebUser(
+            id=new_user["localId"], 
+            full_name=full_name,
+            seller_id=seller_id,
+            aadhaar_link="https://firebasestorage.googleapis.com/v0/b/farm-a-future.appspot.com/o/aadhaars%2F{}_aadhaar.pdf?alt=media".format(new_user["localId"]),
+            request_seller=True,
+            account_address=account_address,
+            group=models.Group.objects.filter(name="NormalUser")[0])
+
+        web_user.save()
+
+        new_cart = Cart(user=web_user, cart="")
+        new_cart.save()
     return HttpResponseRedirect(reverse("home"))
 
 
@@ -65,3 +102,24 @@ def handleLogout(request):
     auth.logout(request)
     authe.current_user = None
     return HttpResponseRedirect(reverse("home"))
+
+
+def shop(request):
+    user = WebUser.objects.filter(id=request.session['uid'])[0]
+    get_cart = Cart.objects.filter(user=user)[0]
+    get_cart = "{}".format(get_cart.cart)
+    return render(request, "index.html", {'carty': get_cart})
+
+
+def update_cart(request):
+    #dynamically updating the cart using ajax request
+    user = WebUser.objects.filter(id=request.session['uid'])[0]
+    new_cart = request.GET.get('cart', None)
+    get_cart = Cart.objects.filter(user=user)[0]
+    get_cart.cart = new_cart
+    get_cart.save()
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
+
+
+def user_profile(request):
+    return render(request, "user_profile.html")

@@ -25,7 +25,9 @@ urlpatterns = [
     path('home/', views.home, name='home'),
     path('login/', views.handleLogin, name='login'),
     path('signupuser/', views.handleSignUpUser, name='signupuser'),
+    path('signupseller/', views.handleSignUpSeller, name='signupseller'),
     path('logout/', views.handleLogout, name='logout'),
-
-]+static(settings.MEDIA_URL,document_root=settings.MEDIA_ROOT)
-
+    path('shop/', views.shop, name='shop'),
+    path('ajax/cartUpdate/', views.update_cart, name='updatecart'),
+    path('userprofile/', views.user_profile, name='userprofile'),
+]+static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

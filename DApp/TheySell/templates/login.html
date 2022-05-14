@@ -20,13 +20,21 @@
 
     <div class="container" id="container">
         <div class="form-container sign-up-container">
-            <form action="{% url 'signupuser' %}" method="POST">{% csrf_token %}
+            <form action="{% url 'signupuser' %}" method="POST" id="signupForm" enctype="multipart/form-data">{% csrf_token %}
                 <h1>Create Account</h1>
                 
                 <span>Use your email for registration</span>
                 <input type="text" placeholder="Full Name" name="fullname" required/>
                 <input type="email" placeholder="Email" name="email" required/>
                 <input type="password" placeholder="Password" name="password" required/>
+                <label for="adharcard" id="labeladharcard" hidden>Upload Aadhar Card:</label>
+                <input type="file" placeholder="Aadhaar Card" name="aadhaarcard" id="aadhaarcard" hidden/>
+                <input type="text" placeholder="Seller ID" name="sellerid" id="sellerid" hidden/>
+                <input type="text" placeholder="Account Address" name="accadd" id="accadd" hidden/>
+                <div style="width: 80%;padding: 12px">
+                    <label for="is_seller">Are you a Seller?</label>
+                    <input type="checkbox" style="width: 24% !important;padding-top: 0px !important;margin-top: 2px !important;" name="is_seller" id="is_seller" onclick="seller_details()"/>
+                </div>
                 <button type="submit">Sign Up</button>
             </form>
         </div>
@@ -56,6 +64,9 @@
     </div>
 
     <script src="/media/js/login.js"></script>
+    <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <script src="/media/js/shop.js"></script>
 </body>
 
 </html>
