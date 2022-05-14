@@ -54,12 +54,12 @@ window.addEventListener('load', async () => {
 
 async function getAllGoods(){
 
-    all_sellers = await operations_contract.methods.getAllsellers().call()
+    all_sellers = await operations_contract.methods.getAllSellers().call()
     seller_to_goods = {};
     all_prods = []
 
     for (let index = 0; index < all_sellers.length; index++) {
-        seller_to_goods[all_sellers[index]] = await operations_contract.methods.getGoodByseller(all_sellers[index]).call()
+        seller_to_goods[all_sellers[index]] = await operations_contract.methods.getGoodBySeller(all_sellers[index]).call()
     }
     for(let seller_index=0; seller_index < all_sellers.length; seller_index++){
         $("#shopping_container").append(`
@@ -93,6 +93,7 @@ async function getAllGoods(){
                     <img id="imagepr${curr_good["id"]}" src='${curr_good["image_uri"]}' class="card-img-top" alt="...">
                     <div class="card-body">
                         <h5 class="card-title" id="namepr${curr_good["id"]}">${curr_good["name"]}</h5>
+                        <p id="sellerpr${curr_good["id"]}" hidden>${curr_good["good_owner"]}</p>
                         <h6 class="card-text" id="pricepr${curr_good["id"]}">${curr_good["token_amount"] / (10**18)}</h6>
                         <p class="card-text">${curr_good["description"]}</p>
                         <span id="divpr${curr_good["id"]}" class="divpr">
@@ -122,6 +123,7 @@ async function getAllGoods(){
 
     };
     if (localStorage.getItem('cart') == null) {
+        localStorage.setItem("seller_in_cart", "")
         var cart = {};
     } else {
         cart = JSON.parse(localStorage.getItem('cart'));
@@ -129,8 +131,8 @@ async function getAllGoods(){
         updateCart(cart);
     }
     for (var item in cart) {
-        let idst = item;
-        document.getElementById('div' + item).innerHTML = `<button id="A${idst}" class="btn btn-primary cart" disabled>Added to cart</button>`;
+        localStorage.setItem("seller_in_cart", cart[item][4])
+        document.getElementById('div' + item).innerHTML = `<button id="A${item}" class="btn btn-primary cart" disabled>Added to cart</button>`;
     }
     updatePopover(cart);
 }

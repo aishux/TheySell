@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect
 from django.contrib import auth
 from django.http import HttpResponseRedirect, JsonResponse
 from django.urls import reverse
-from sellapp.models import WebUser
+from sellapp.models import WebUser, Cart, Orders
 from django.contrib.auth import models
 from django.core.files.storage import default_storage
 
@@ -86,7 +86,7 @@ def handleSignUpSeller(request):
             id=new_user["localId"], 
             full_name=full_name,
             seller_id=seller_id,
-            aadhaar_link="https://firebasestorage.googleapis.com/v0/b/farm-a-future.appspot.com/o/aadhaars%2F{}_aadhaar.pdf?alt=media".format(new_user["localId"]),
+            aadhaar_link="https://firebasestorage.googleapis.com/v0/b//o/aadhaars%2F{}_aadhaar.pdf?alt=media".format(new_user["localId"]),
             request_seller=True,
             account_address=account_address,
             group=models.Group.objects.filter(name="NormalUser")[0])
@@ -119,6 +119,45 @@ def update_cart(request):
     get_cart.cart = new_cart
     get_cart.save()
     return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
+
+
+def display_cart(request):
+    return render(request, "cart.html")
+
+
+def checkout(request):
+    if request.method == "POST":
+        user = WebUser.objects.filter(id=request.session['uid'])[0]
+        order_id = request.POST.get("order_id")
+        items_json = request.POST.get('itemsJson','')
+        name = request.POST.get('firstName','')+" "+request.POST.get('lastName','')
+        amount = request.POST.get('amount','')
+        email = request.POST.get('email','')
+        address = request.POST.get('address1','')+" "+request.POST.get('address2','')
+        city = request.POST.get('city','')
+        state = request.POST.get('state','')
+        zip_code = request.POST.get('zip_code','')
+        phone = request.POST.get('phone','')
+
+        new_order = Orders(
+            user=user,
+            order_id=order_id,
+            items_json=items_json,
+            amount=float(amount),
+            name=name,
+            email=email,
+            address=address,
+            city=city,
+            state=state,
+            zip_code=zip_code,
+            phone=phone
+        )
+
+        new_order.save()
+
+        return JsonResponse({"order_id": order_id})
+
+    return render(request, "checkout.html")
 
 
 def user_profile(request):
