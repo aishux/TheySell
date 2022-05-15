@@ -1,4 +1,4 @@
-const web = new Web3("https://rinkeby.infura.io/v3/")
+const web = new Web3("https://rinkeby.infura.io/v3/384b2420ae804f5ca4b5d6aa630f3c7b")
 token_contract_details = JSON.parse(localStorage.getItem("token_contract"))
 operations_contract_details = JSON.parse(localStorage.getItem("operations_contract"))
 var token_contract = new web.eth.Contract(token_contract_details[0], token_contract_details[1])

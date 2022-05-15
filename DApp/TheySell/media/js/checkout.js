@@ -1,4 +1,4 @@
-const web = new Web3("https://rinkeby.infura.io/v3/")
+const web = new Web3("https://rinkeby.infura.io/v3/384b2420ae804f5ca4b5d6aa630f3c7b")
 token_contract_details = JSON.parse(localStorage.getItem("token_contract"))
 operations_contract_details = JSON.parse(localStorage.getItem("operations_contract"))
 var token_contract = new web.eth.Contract(token_contract_details[0], token_contract_details[1])
@@ -66,16 +66,16 @@ if ($.isEmptyObject(cart)) {
         finalprice = finalprice + totprice;
         mystr = `<li class="list-group-item d-flex justify-content-between lh-condensed">
             <div>
-                <h6 class="my-0">${name}</h6>
-                <small class="text-muted">Quantity:${qty}</small>
+                <h6 style="color: #782E9A" class="my-0">${name}</h6>
+                <small style="color: #F9A926">Quantity:${qty}</small>
             </div>
-            <span class="text-muted">${totprice}</span>
+            <span style="color: #F9A926">${totprice}</span>
         </li>`
         $('#items').append(mystr);
     }
     mystr = `<li class="list-group-item d-flex justify-content-between">
-        <span>Total (They Coin)</span>
-        <strong>AC <span id='totalPrice'>${finalprice}</span></strong>
+        <span style="color: #782E9A">Total (They Coin)</span>
+        <strong style="color: #F9A926">AC <span id='totalPrice'>${finalprice}</span></strong>
     </li>`;
     $('#items').append(mystr);
 }

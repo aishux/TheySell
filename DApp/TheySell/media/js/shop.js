@@ -1,13 +1,14 @@
 var current_user_account = ""
 var token_contract = ""
 var operations_contract = ""
-const address_token_contract = ""
-const address_sell_operations = ""
+const address_token_contract = "0x7Dd436Fb09aa3946ab85074308055c62733aEb64"
+const address_sell_operations = "0x7A4Ac61702820B44048099425b9Ac37a0931C06b"
 
-const web = new Web3("https://rinkeby.infura.io/v3/")
+const web = new Web3("https://rinkeby.infura.io/v3/384b2420ae804f5ca4b5d6aa630f3c7b")
+
 
 $.ajax({
-    url: "https://api-rinkeby.etherscan.io/api?module=contract&action=getabi&address=&apikey=",
+    url: "https://api-rinkeby.etherscan.io/api?module=contract&action=getabi&address=0x7Dd436Fb09aa3946ab85074308055c62733aEb64&apikey=39MRYT8W4D35AH26BJZVGQ1KK19SR5XWXG",
     dataType: "json",
     success: function (data) {
         token_contract = new web.eth.Contract(JSON.parse(data.result), address_token_contract)
@@ -16,7 +17,7 @@ $.ajax({
 });
 
 $.ajax({
-    url: "https://api-rinkeby.etherscan.io/api?module=contract&action=getabi&address=&apikey=",
+    url: "https://api-rinkeby.etherscan.io/api?module=contract&action=getabi&address=0x7A4Ac61702820B44048099425b9Ac37a0931C06b&apikey=39MRYT8W4D35AH26BJZVGQ1KK19SR5XWXG",
     dataType: "json",
     success: function (data) {
         operations_contract = new web.eth.Contract(JSON.parse(data.result), address_sell_operations)
@@ -63,7 +64,7 @@ async function getAllGoods(){
     }
     for(let seller_index=0; seller_index < all_sellers.length; seller_index++){
         $("#shopping_container").append(`
-            <h1>${all_sellers[seller_index]}</h1>
+            <h1 style="font-weight: 900;font-size:30px;color: #23211f;font-family: 'Open Sans Condensed';padding-top:30px;color: #782E9A">Seller Id: ${all_sellers[seller_index]}</h1>
         `)
 
         var $carousel_slide = $(`<div id="demo${seller_index}" class="col carousel slide my-3" data-ride="carousel"></div>`)
@@ -89,15 +90,15 @@ async function getAllGoods(){
             curr_good = seller_to_goods[all_sellers[seller_index]][goods_index]
             $carousel_item.append(`
             <div class="col-xs-3 col-sm-3 col-md-3" id="card_main">
-                <div class="card align-items-center" style="width: 18rem;">
+                <div class="card align-items-center" style="width: 18rem;text-align: center;border:1px solid #F4EEA9">
                     <img id="imagepr${curr_good["id"]}" src='${curr_good["image_uri"]}' class="card-img-top" alt="...">
                     <div class="card-body">
-                        <h5 class="card-title" id="namepr${curr_good["id"]}">${curr_good["name"]}</h5>
+                        <h5 style="font-weight: 900;text-transform: uppercase;font-size:30px;color: #782E9A;font-family: 'Open Sans Condensed';" class="card-title" id="namepr${curr_good["id"]}">${curr_good["name"]}</h5>
                         <p id="sellerpr${curr_good["id"]}" hidden>${curr_good["good_owner"]}</p>
-                        <h6 class="card-text" id="pricepr${curr_good["id"]}">${curr_good["token_amount"] / (10**18)}</h6>
-                        <p class="card-text">${curr_good["description"]}</p>
+                        <p style="font-family: 'Open Sans Condensed';font-size: 17px;opacity: 0.8;color:#F9A926" class="card-text">${curr_good["description"]}</p>
+                        <h6 class="card-text" style="font-weight: 800;color: #782E9A"><span id="pricepr${curr_good["id"]}"> ${curr_good["token_amount"] / (10**18)}</span> AC</h6>
                         <span id="divpr${curr_good["id"]}" class="divpr">
-                            <button id="pr${curr_good["id"]}" onclick="addtoCart(this.id)" class="btn btn-primary cart">Add to cart</button></span>
+                            <button id="pr${curr_good["id"]}" onclick="addtoCart(this.id)" class="btn cart" style="background-color:#F9A926;color:white">Add to cart</button></span>
                     </div>
                 </div>
             </div>
@@ -129,7 +130,7 @@ async function getAllGoods(){
     }
     for (var item in cart) {
         localStorage.setItem("seller_in_cart", cart[item][4])
-        document.getElementById('div' + item).innerHTML = `<button id="A${item}" class="btn btn-primary cart" disabled>Added to cart</button>`;
+        document.getElementById('div' + item).innerHTML = `<button id="A${item}" class="btn cart" style="background-color:#F9A926;color:white" disabled>Added to cart</button>`;
     }
     updatePopover(cart);
 }

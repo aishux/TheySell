@@ -23,6 +23,7 @@ from django.conf import settings
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.home, name='home'),
+    path('loginpage/', views.login_page, name='login_page'),
     path('login/', views.handleLogin, name='login'),
     path('signupuser/', views.handleSignUpUser, name='signupuser'),
     path('signupseller/', views.handleSignUpSeller, name='signupseller'),
@@ -38,5 +39,5 @@ urlpatterns = [
     path('seller/saveGood', views.save_good, name='savegood'),
     path('seller/home', views.seller_home, name='sellerhome'),
     path('seller/withdraw/<str:acc_address>', views.seller_withdraw, name='sellerhome'),
-    path('checkout/', views.checkout, name='checkout')
+    path('checkout/', views.checkout, name='checkout'),
 ]+static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

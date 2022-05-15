@@ -1,14 +1,15 @@
 import json
 import pyrebase
 import os
-from django.shortcuts import render, redirect
+from django.shortcuts import render
 from django.contrib import auth
 from django.http import HttpResponseRedirect, JsonResponse, HttpResponse
 from django.urls import reverse
-from farmapp.models import WebUser, Cart, Orders
+from sellapp.models import WebUser, Cart, Orders
 from django.contrib.auth import models
 from django.core.files.storage import default_storage
 from .utils import web, operations_contract, upload_to_ipfs, final_is_delivered, token_address
+from django.core.files.storage import default_storage
 
 config = {
     'apiKey': "",
@@ -26,6 +27,10 @@ storage = firebase.storage()
 
 
 def home(request):
+    return render(request, "home.html")
+
+
+def login_page(request):
     if request.session.get('uid') is not None:
         user = WebUser.objects.filter(id=request.session['uid'])[0]
         if user.group.name == "Seller":
@@ -57,7 +62,7 @@ def handleLogin(request):
         request.session['email'] = email
         request.session['usrname'] = email.split("@")[0]
         request.session['uid'] = str(session_id)
-    return HttpResponseRedirect(reverse("home"))
+    return HttpResponseRedirect(reverse("login_page"))
 
 
 def handleSignUpUser(request):
@@ -70,7 +75,7 @@ def handleSignUpUser(request):
         web_user.save()
         new_cart = Cart(user=web_user, cart="{}")
         new_cart.save()
-    return HttpResponseRedirect(reverse("home"))
+    return HttpResponseRedirect(reverse("login_page"))
 
 
 def handleSignUpSeller(request):
@@ -103,7 +108,7 @@ def handleSignUpSeller(request):
 
         new_cart = Cart(user=web_user, cart="{}")
         new_cart.save()
-    return HttpResponseRedirect(reverse("home"))
+    return HttpResponseRedirect(reverse("login_page"))
 
 
 def handleLogout(request):
@@ -217,8 +222,8 @@ def user_profile(request):
         amount_withdrawable = ""
         user = WebUser.objects.filter(id=request.session['uid'])[0]
         user_email = request.session["email"]
-        is_seller = user.group.name == "Seller"
-        if is_seller:
+        is_seller = (user.group.name == "Seller")
+        if user.group.name == "Seller":
             account_address = user.account_address
             seller_balance = web.eth.getBalance(account_address)
             amount_withdrawable = operations_contract.functions.seller_to_amount_payable(account_address).call()
@@ -253,7 +258,7 @@ def save_good(request):
             nonce = web.eth.get_transaction_count(web.toChecksumAddress(web.eth.default_account))
             operation_tx = operations_contract.functions.addGoods(seller_address, good_name, token_amount, image_uri, description).buildTransaction({
                 'chainId': 4,
-                'gas': 7000000,
+                'gas': 70000000,
                 'gasPrice': web.toHex((10**11)),
                 'nonce': nonce,
                 })
